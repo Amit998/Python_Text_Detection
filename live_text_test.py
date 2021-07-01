@@ -3,8 +3,9 @@ import numpy as np
 import pytesseract
 import asyncio
 import cv2
-import tensorflow
+import tensorflow as tf
 
+tf.config.experimental.enable_mlir_graph_optimization()
 
 
 
@@ -21,6 +22,7 @@ class live_text:
     length_store={}
     data=None
     model=None
+    max_key=None
 
     predicted_text=None
 
@@ -51,7 +53,7 @@ class live_text:
         self.stopper=stopper
         self.model_path = "model/keras_model.h5"
         # np.set_printoptions(suppress=True)
-        self.model = tensorflow.keras.models.load_model(self.model_path)
+        self.model = tf.keras.models.load_model(self.model_path)
         self.data = np.ndarray(shape=(1, 224, 224, 3), dtype=np.float32)
     
 
@@ -222,56 +224,52 @@ class live_text:
                 # print(text)
 
 
-            if (self.flag == self.stopper):
-                cv2.destroyAllWindows()
+            if (self.flag == self.stopper or (cv2.waitKey(1) & 0xFF == ord('q'))):    
                 break
             
             img2=cv2.resize(img,(400,400))
             cv2.imshow("Frame",img2)
+
             
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                cv2.destroyAllWindows()
-                break
+           
         
-        
-        max_key = max(self.predictions_dictonary_occurance, key=self.predictions_dictonary_occurance.get)
+        vid.release()
+        cv2.destroyAllWindows()
 
-        print(self.predictions_dictonary_occurance)
-        # print(max_key)
+        self.max_key = max(self.predictions_dictonary_occurance, key=self.predictions_dictonary_occurance.get)
 
-        if(max_key =="Readable"):
+        # print(self.predictions_dictonary_occurance)
+        print(self.max_key)
+
+        if(self.max_key =="Readable"):
             temp_store=max(self.readable_data_store.keys())
             self.predicted_text=self.readable_data_store[temp_store]
            
-        elif(max_key =="RoadSign"):
+        elif(self.max_key =="RoadSign"):
             self.predicted_text="Road Sign Detected"
-        elif(max_key =="Id"):
+        elif(self.max_key =="Id"):
             temp_store=max(self.id_data_store.keys())
-            self.predicted_text=self.id_data_store[temp_store]
+            self.predicted_text=self.id_data_store[temp_store]+"it's identification card"
 
-
-        elif(max_key =="Posters"):
+        elif(self.max_key =="Posters"):
             temp_store=max(self.poster_data_store.keys())
-            self.predicted_text=self.poster_data_store[temp_store]
+            self.predicted_text=self.poster_data_store[temp_store]+" it's poster"
 
-        elif(max_key =="NoImage"):
+        elif(self.max_key =="NoImage"):
             self.predicted_text="No Readable Image Found"
-            
-        # print(self.predicted_text)
-        
-        
-        return self.predicted_text
+        print(self.predicted_text)
 
         
         
-
-
     def run(self):
         asyncio.run(self.live_image())
         return
        
+        
 
 
+    
 
-lt=live_text()
-lt.run()
+lt=live_text(stopper=10)
+t=lt.run()
+print(lt)
